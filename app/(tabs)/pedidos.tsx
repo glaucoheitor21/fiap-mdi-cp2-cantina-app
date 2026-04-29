@@ -1,5 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -9,6 +11,8 @@ import {
 } from 'react-native';
 import { theme } from '../../constants/theme';
 
+const ORDERS_STORAGE_KEY = '@cantina:orders';
+
 type OrderStatus = 'aguardando' | 'preparando' | 'pronto';
 
 type Order = {
@@ -17,40 +21,25 @@ type Order = {
   status: OrderStatus;
   time: string;
   total: number;
+  userEmail: string; // Adicionado para associar ao usuário
 };
 
-const MOCK_ORDERS: Order[] = [
-  {
-    id: '#2041',
-    items: [
-      { name: 'X-Burguer', qty: 1, price: 18.9, emoji: '🍔' },
-      { name: 'Suco Natural', qty: 1, price: 8.0, emoji: '🍊' },
-    ],
-    status: 'preparando',
-    time: '11:32',
-    total: 26.9,
-  },
-  {
-    id: '#2038',
-    items: [
-      { name: 'Prato Executivo', qty: 1, price: 28.0, emoji: '🍽️' },
-      { name: 'Água Mineral', qty: 1, price: 3.0, emoji: '💧' },
-    ],
-    status: 'pronto',
-    time: '11:15',
-    total: 31.0,
-  },
-  {
-    id: '#2035',
-    items: [
-      { name: 'Brownie', qty: 2, price: 9.9, emoji: '🍫' },
-      { name: 'Refrigerante', qty: 1, price: 5.5, emoji: '🥤' },
-    ],
-    status: 'aguardando',
-    time: '11:45',
-    total: 25.3,
-  },
-];
+const getStoredOrders = async (): Promise<Order[]> => {
+  const ordersRaw = await AsyncStorage.getItem(ORDERS_STORAGE_KEY);
+  if (!ordersRaw) {
+    return [];
+  }
+  try {
+    const parsedOrders = JSON.parse(ordersRaw) as Order[];
+    return Array.isArray(parsedOrders) ? parsedOrders : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveOrders = async (orders: Order[]) => {
+  await AsyncStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
+};
 
 const STATUS_CONFIG: Record<
   OrderStatus,
@@ -77,7 +66,23 @@ const STATUS_CONFIG: Record<
 };
 
 export default function PedidosScreen() {
-  const [orders] = useState<Order[]>(MOCK_ORDERS);
+  const [orders, setOrders] = useState<Order[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const loadOrders = async () => {
+        const storedOrders = await getStoredOrders();
+        setOrders(storedOrders);
+      };
+      loadOrders();
+    }, [])
+  );
+
+  const removeOrder = async (orderId: string) => {
+    const updatedOrders = orders.filter(order => order.id !== orderId);
+    setOrders(updatedOrders);
+    await saveOrders(updatedOrders);
+  };
 
   const prontos = orders.filter((o) => o.status === 'pronto');
   const emAndamento = orders.filter((o) => o.status !== 'pronto');
@@ -122,7 +127,7 @@ export default function PedidosScreen() {
 
         {/* Ação para pedido pronto */}
         {order.status === 'pronto' && (
-          <TouchableOpacity style={styles.collectButton} activeOpacity={0.85}>
+          <TouchableOpacity style={styles.collectButton} activeOpacity={0.85} onPress={() => removeOrder(order.id)}>
             <Ionicons name="checkmark-done-outline" size={16} color="#fff" />
             <Text style={styles.collectButtonText}>Confirmar Retirada</Text>
           </TouchableOpacity>

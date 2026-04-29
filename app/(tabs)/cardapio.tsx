@@ -1,15 +1,46 @@
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  FlatList,
-} from 'react-native';
-import { useState } from 'react';
-import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import {
+  FlatList,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { theme } from '../../constants/theme';
+
+const ORDERS_STORAGE_KEY = '@cantina:orders';
+
+type OrderStatus = 'aguardando' | 'preparando' | 'pronto';
+
+type Order = {
+  id: string;
+  items: { name: string; qty: number; price: number; emoji: string }[];
+  status: OrderStatus;
+  time: string;
+  total: number;
+  userEmail: string;
+};
+
+const getStoredOrders = async (): Promise<Order[]> => {
+  const ordersRaw = await AsyncStorage.getItem(ORDERS_STORAGE_KEY);
+  if (!ordersRaw) {
+    return [];
+  }
+  try {
+    const parsedOrders = JSON.parse(ordersRaw) as Order[];
+    return Array.isArray(parsedOrders) ? parsedOrders : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveOrders = async (orders: Order[]) => {
+  await AsyncStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
+};
 
 const CATEGORIES = ['Todos', 'Lanches', 'Refeições', 'Bebidas', 'Sobremesas'];
 
@@ -37,6 +68,38 @@ export default function CardapioScreen() {
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [cart, setCart] = useState<Record<string, CartItem>>({});
+
+  const makeOrder = async () => {
+    const cartItems = Object.values(cart);
+    if (cartItems.length === 0) return;
+
+    const items = cartItems.map(item => ({
+      name: item.name,
+      qty: item.qty,
+      price: item.price,
+      emoji: item.emoji,
+    }));
+    const total = cartItems.reduce((sum, item) => sum + item.qty * item.price, 0);
+    const now = new Date();
+    const time = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const orderId = `#${Date.now().toString().slice(-4)}`;
+
+    const newOrder: Order = {
+      id: orderId,
+      items,
+      status: 'aguardando',
+      time,
+      total,
+      userEmail: 'user@fiap.com.br', // TODO: obter email do usuário logado
+    };
+
+    const existingOrders = await getStoredOrders();
+    const updatedOrders = [newOrder, ...existingOrders];
+    await saveOrders(updatedOrders);
+
+    setCart({}); // Limpar carrinho
+    router.push('/(tabs)/pedidos');
+  };
 
   const filtered =
     selectedCategory === 'Todos'
@@ -133,13 +196,13 @@ export default function CardapioScreen() {
       {totalItems > 0 && (
         <TouchableOpacity
           style={styles.cartButton}
-          onPress={() => router.push('/(tabs)/pedidos')}
+          onPress={makeOrder}
           activeOpacity={0.9}
         >
           <View style={styles.cartBadge}>
             <Text style={styles.cartBadgeText}>{totalItems}</Text>
           </View>
-          <Text style={styles.cartButtonText}>Ver Pedido</Text>
+          <Text style={styles.cartButtonText}>Fazer Pedido</Text>
           <Text style={styles.cartButtonPrice}>R$ {totalPrice.toFixed(2)}</Text>
         </TouchableOpacity>
       )}
