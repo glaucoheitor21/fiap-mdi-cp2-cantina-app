@@ -4,6 +4,34 @@
 
 ---
 
+---
+
+## 🔄 Checkpoint 02 — Evolução do Projeto
+
+Esta seção documenta as melhorias implementadas em relação à entrega anterior.
+
+### ✨ Novas Funcionalidades
+
+#### 📝 Tela de Cadastro
+Adicionada tela de cadastro de novo usuário acessível a partir do login. O aluno pode criar uma conta informando nome, e-mail institucional e senha, com validação dos campos antes do envio.
+
+<img width="1919" height="949" alt="image" src="https://github.com/user-attachments/assets/0a787b54-1d28-4663-b89b-71f0d2e17476" />
+
+
+#### 🔐 Autenticação com AsyncStorage
+A autenticação deixou de ser simulada e passou a ser persistida localmente com **AsyncStorage**. Após o login, a sessão do usuário é salva no dispositivo — ao reabrir o app, o aluno é redirecionado diretamente para o cardápio sem precisar logar novamente. O logout limpa os dados salvos e retorna para a tela de login.
+
+#### 🧾 Pedidos Salvos com AsyncStorage
+Os pedidos realizados pelo usuário agora são **persistidos no dispositivo** via AsyncStorage. A lista de pedidos abertos é carregada ao entrar na aba, mantendo o histórico mesmo após fechar e reabrir o aplicativo.
+
+#### 🔍 Busca por Texto em Tempo Real no Cardápio
+Adicionado campo de busca na tela do cardápio que filtra os itens conforme o usuário digita. A busca funciona em conjunto com o filtro de categorias já existente — é possível, por exemplo, filtrar por "Refeições" e buscar "frango" ao mesmo tempo.
+
+<img width="1919" height="860" alt="image" src="https://github.com/user-attachments/assets/dba84833-3fd8-4101-9669-cbd891688f27" />
+
+
+---
+
 ## 📋 Sobre o Projeto
 
 ### O Problema
