@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -11,7 +12,30 @@ import {
   View,
 } from 'react-native';
 import { theme } from '../constants/theme';
-import { validateLogin } from '../services/auth-storage';
+
+const USERS_STORAGE_KEY = '@cantina:users';
+
+type AuthUser = {
+  email: string;
+  password: string;
+};
+
+const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
+const getStoredUsers = async (): Promise<AuthUser[]> => {
+  const usersRaw = await AsyncStorage.getItem(USERS_STORAGE_KEY);
+
+  if (!usersRaw) {
+    return [];
+  }
+
+  try {
+    const parsedUsers = JSON.parse(usersRaw) as AuthUser[];
+    return Array.isArray(parsedUsers) ? parsedUsers : [];
+  } catch {
+    return [];
+  }
+};
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -29,7 +53,9 @@ export default function LoginScreen() {
     setError('');
     setLoading(true);
 
-    const isValidUser = await validateLogin(email, password);
+    const users = await getStoredUsers();
+    const normalizedEmail = normalizeEmail(email);
+    const isValidUser = users.some((user) => normalizeEmail(user.email) === normalizedEmail && user.password === password);
     if (isValidUser) {
       setLoading(false);
       router.replace('/(tabs)/cardapio');
