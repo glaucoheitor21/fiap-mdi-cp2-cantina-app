@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -68,6 +69,7 @@ export default function CardapioScreen() {
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [cart, setCart] = useState<Record<string, CartItem>>({});
+  const [searchText, setSearchText] = useState('');
 
   const makeOrder = async () => {
     const cartItems = Object.values(cart);
@@ -101,10 +103,12 @@ export default function CardapioScreen() {
     router.push('/(tabs)/pedidos');
   };
 
-  const filtered =
-    selectedCategory === 'Todos'
-      ? MENU_ITEMS
-      : MENU_ITEMS.filter((i) => i.category === selectedCategory);
+  const filtered = MENU_ITEMS.filter((item) => {
+    const matchesCategory = selectedCategory === 'Todos' || item.category === selectedCategory;
+    const matchesSearch = item.name.toLowerCase().includes(searchText.toLowerCase()) ||
+                         item.description.toLowerCase().includes(searchText.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
   const addToCart = (item: typeof MENU_ITEMS[0]) => {
     setCart((prev) => ({
@@ -155,6 +159,18 @@ export default function CardapioScreen() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+
+      {/* Campo de busca */}
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color={theme.colors.textMuted} style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Buscar itens..."
+          placeholderTextColor={theme.colors.textMuted}
+          value={searchText}
+          onChangeText={setSearchText}
+        />
+      </View>
 
       {/* Lista de itens */}
       <FlatList
@@ -364,5 +380,23 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     opacity: 0.9,
+  },
+  searchContainer: {
+    backgroundColor: theme.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: theme.colors.textPrimary,
+    paddingVertical: 8,
   },
 });
