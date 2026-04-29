@@ -11,33 +11,42 @@ import {
   View,
 } from 'react-native';
 import { theme } from '../constants/theme';
-import { validateLogin } from '../services/auth-storage';
+import { registerUser } from '../services/auth-storage';
 
-export default function LoginScreen() {
+export default function RegisterScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleLogin = async () => {
-    if (!email || !password) {
+  const handleRegister = async () => {
+    if (!email || !password || !confirmPassword) {
       setError('Preencha todos os campos.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('As senhas não coincidem.');
       return;
     }
 
     setError('');
     setLoading(true);
 
-    const isValidUser = await validateLogin(email, password);
-    if (isValidUser) {
+    try {
+      await registerUser(email, password);
       setLoading(false);
-      router.replace('/(tabs)/cardapio');
-      return;
+      router.replace('/login');
+    } catch (registrationError) {
+      const message =
+        registrationError instanceof Error
+          ? registrationError.message
+          : 'Não foi possível concluir o cadastro.';
+      setLoading(false);
+      setError(message);
     }
-
-    setLoading(false);
-    setError('E-mail ou senha inválidos. Faça seu cadastro primeiro.');
   };
 
   return (
@@ -45,18 +54,16 @@ export default function LoginScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* Header decorativo */}
       <View style={styles.header}>
         <View style={styles.logoBox}>
           <Text style={styles.logoText}>FIAP</Text>
         </View>
-        <Text style={styles.appTitle}>Cantina</Text>
-        <Text style={styles.subtitle}>Peça sem sair do lugar</Text>
+        <Text style={styles.appTitle}>Criar conta</Text>
+        <Text style={styles.subtitle}>Use seu e-mail para se registrar</Text>
       </View>
 
-      {/* Card de login */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Entrar</Text>
+        <Text style={styles.cardTitle}>Cadastro</Text>
 
         <View style={styles.fieldGroup}>
           <Text style={styles.label}>E-mail institucional</Text>
@@ -83,31 +90,37 @@ export default function LoginScreen() {
           />
         </View>
 
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>Confirmar senha</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="••••••••"
+            placeholderTextColor={theme.colors.textMuted}
+            secureTextEntry
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+          />
+        </View>
+
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleLogin}
+          onPress={handleRegister}
           activeOpacity={0.85}
           disabled={loading}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Entrar</Text>
+            <Text style={styles.buttonText}>Cadastrar</Text>
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.forgotButton}>
-          <Text style={styles.forgotText}>Esqueci minha senha</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.registerButton} onPress={() => router.push('/register')}>
-          <Text style={styles.registerText}>Ainda não tem conta? Cadastre-se</Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Text style={styles.backText}>Voltar para login</Text>
         </TouchableOpacity>
       </View>
-
-      <Text style={styles.footer}>© FIAP — Todos os direitos reservados</Text>
     </KeyboardAvoidingView>
   );
 }
@@ -205,28 +218,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.3,
   },
-  forgotButton: {
+  backButton: {
     alignItems: 'center',
     marginTop: theme.spacing.md,
   },
-  forgotText: {
+  backText: {
     color: theme.colors.primary,
     fontSize: 13,
     fontWeight: '500',
-  },
-  registerButton: {
-    alignItems: 'center',
-    marginTop: theme.spacing.sm,
-  },
-  registerText: {
-    color: theme.colors.textSecondary,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  footer: {
-    textAlign: 'center',
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    marginTop: theme.spacing.xl,
   },
 });
